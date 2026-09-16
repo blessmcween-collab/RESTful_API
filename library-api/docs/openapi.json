@@ -1,0 +1,969 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Library Books API",
+        "description": "\nA RESTful API for managing a library's book catalogue.\n\n**Features**\n* Full CRUD on `/api/v1/books`: create, list, read, replace, partially update, delete\n* Input validation: lengths, ranges, ISBN-13 check digit, rejection of unknown fields\n* Pagination, filtering, search and sorting on the list endpoint\n* Consistent JSON error format: `{\"error\": {\"code\", \"message\", \"details\"}}`\n",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/api/v1/books": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "List books",
+                "description": "Return a paginated list of books with optional filtering, search and sorting.",
+                "operationId": "list_books_api_v1_books_get",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "description": "Max items to return",
+                            "default": 20,
+                            "title": "Limit"
+                        },
+                        "description": "Max items to return"
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of items to skip",
+                            "default": 0,
+                            "title": "Offset"
+                        },
+                        "description": "Number of items to skip"
+                    },
+                    {
+                        "name": "author",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "maxLength": 100
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Partial, case-insensitive match",
+                            "title": "Author"
+                        },
+                        "description": "Partial, case-insensitive match"
+                    },
+                    {
+                        "name": "genre",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "maxLength": 50
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Exact, case-insensitive match",
+                            "title": "Genre"
+                        },
+                        "description": "Exact, case-insensitive match"
+                    },
+                    {
+                        "name": "available",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by availability",
+                            "title": "Available"
+                        },
+                        "description": "Filter by availability"
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Search title or author",
+                            "title": "Q"
+                        },
+                        "description": "Search title or author"
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "enum": [
+                                "id",
+                                "title",
+                                "author",
+                                "published_year",
+                                "created_at"
+                            ],
+                            "type": "string",
+                            "description": "Field to sort by",
+                            "default": "id",
+                            "title": "Sort"
+                        },
+                        "description": "Field to sort by"
+                    },
+                    {
+                        "name": "order",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ],
+                            "type": "string",
+                            "description": "Sort direction",
+                            "default": "asc",
+                            "title": "Order"
+                        },
+                        "description": "Sort direction"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookList"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Create a book",
+                "description": "Create a new book. The `Location` response header points to the new resource.",
+                "operationId": "create_book_api_v1_books_post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookRead"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ISBN already used by another book",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/books/{book_id}": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Get a book",
+                "description": "Retrieve a single book by its ID.",
+                "operationId": "get_book_api_v1_books__book_id__get",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "description": "Unique numeric ID of the book",
+                            "examples": [
+                                1
+                            ],
+                            "title": "Book Id"
+                        },
+                        "description": "Unique numeric ID of the book"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookRead"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Replace a book",
+                "description": "Replace every field of a book. Omitted optional fields are reset to their defaults.",
+                "operationId": "replace_book_api_v1_books__book_id__put",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "description": "Unique numeric ID of the book",
+                            "examples": [
+                                1
+                            ],
+                            "title": "Book Id"
+                        },
+                        "description": "Unique numeric ID of the book"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookRead"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ISBN already used by another book",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Partially update a book",
+                "description": "Update only the fields included in the request body.",
+                "operationId": "patch_book_api_v1_books__book_id__patch",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "description": "Unique numeric ID of the book",
+                            "examples": [
+                                1
+                            ],
+                            "title": "Book Id"
+                        },
+                        "description": "Unique numeric ID of the book"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookPatch"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookRead"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ISBN already used by another book",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Delete a book",
+                "description": "Permanently delete a book. Returns an empty body on success.",
+                "operationId": "delete_book_api_v1_books__book_id__delete",
+                "parameters": [
+                    {
+                        "name": "book_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "description": "Unique numeric ID of the book",
+                            "examples": [
+                                1
+                            ],
+                            "title": "Book Id"
+                        },
+                        "description": "Unique numeric ID of the book"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Health check",
+                "description": "Confirms the API is running and the database is reachable.",
+                "operationId": "health_health_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Health Health Get"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "BookCreate": {
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "title": "Title",
+                        "examples": [
+                            "Clean Code"
+                        ]
+                    },
+                    "author": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "title": "Author",
+                        "examples": [
+                            "Robert C. Martin"
+                        ]
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "Isbn",
+                        "description": "ISBN-13; hyphens/spaces allowed, stored as digits",
+                        "examples": [
+                            "978-0132350884"
+                        ]
+                    },
+                    "published_year": {
+                        "type": "integer",
+                        "minimum": 1450.0,
+                        "title": "Published Year",
+                        "examples": [
+                            2008
+                        ]
+                    },
+                    "pages": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "maximum": 10000.0,
+                                "exclusiveMinimum": 0.0,
+                                "examples": [
+                                    464
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Pages"
+                    },
+                    "genre": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 50,
+                                "minLength": 1,
+                                "examples": [
+                                    "Software Engineering"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Genre"
+                    },
+                    "available": {
+                        "type": "boolean",
+                        "title": "Available",
+                        "default": true
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "title",
+                    "author",
+                    "isbn",
+                    "published_year"
+                ],
+                "title": "BookCreate",
+                "description": "Body for POST (create)."
+            },
+            "BookList": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/BookRead"
+                        },
+                        "type": "array",
+                        "title": "Items"
+                    },
+                    "total": {
+                        "type": "integer",
+                        "title": "Total",
+                        "description": "Total books matching the filters (ignores pagination)"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "title": "Limit"
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "title": "Offset"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "items",
+                    "total",
+                    "limit",
+                    "offset"
+                ],
+                "title": "BookList"
+            },
+            "BookPatch": {
+                "properties": {
+                    "title": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 200,
+                                "minLength": 1,
+                                "examples": [
+                                    "Clean Code"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Title"
+                    },
+                    "author": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 100,
+                                "minLength": 1,
+                                "examples": [
+                                    "Robert C. Martin"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Author"
+                    },
+                    "isbn": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "description": "ISBN-13; hyphens/spaces allowed, stored as digits",
+                                "examples": [
+                                    "978-0132350884"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Isbn"
+                    },
+                    "published_year": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 1450.0,
+                                "examples": [
+                                    2008
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Published Year"
+                    },
+                    "pages": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "maximum": 10000.0,
+                                "exclusiveMinimum": 0.0,
+                                "examples": [
+                                    464
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Pages"
+                    },
+                    "genre": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 50,
+                                "minLength": 1,
+                                "examples": [
+                                    "Software Engineering"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Genre"
+                    },
+                    "available": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Available"
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "title": "BookPatch",
+                "description": "Body for PATCH: send only the fields you want to change."
+            },
+            "BookRead": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "title": "Id"
+                    },
+                    "title": {
+                        "type": "string",
+                        "title": "Title"
+                    },
+                    "author": {
+                        "type": "string",
+                        "title": "Author"
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "Isbn"
+                    },
+                    "published_year": {
+                        "type": "integer",
+                        "title": "Published Year"
+                    },
+                    "pages": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Pages"
+                    },
+                    "genre": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Genre"
+                    },
+                    "available": {
+                        "type": "boolean",
+                        "title": "Available"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Updated At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "title",
+                    "author",
+                    "isbn",
+                    "published_year",
+                    "pages",
+                    "genre",
+                    "available",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "BookRead"
+            },
+            "BookUpdate": {
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "title": "Title",
+                        "examples": [
+                            "Clean Code"
+                        ]
+                    },
+                    "author": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "title": "Author",
+                        "examples": [
+                            "Robert C. Martin"
+                        ]
+                    },
+                    "isbn": {
+                        "type": "string",
+                        "title": "Isbn",
+                        "description": "ISBN-13; hyphens/spaces allowed, stored as digits",
+                        "examples": [
+                            "978-0132350884"
+                        ]
+                    },
+                    "published_year": {
+                        "type": "integer",
+                        "minimum": 1450.0,
+                        "title": "Published Year",
+                        "examples": [
+                            2008
+                        ]
+                    },
+                    "pages": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "maximum": 10000.0,
+                                "exclusiveMinimum": 0.0,
+                                "examples": [
+                                    464
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Pages"
+                    },
+                    "genre": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 50,
+                                "minLength": 1,
+                                "examples": [
+                                    "Software Engineering"
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Genre"
+                    },
+                    "available": {
+                        "type": "boolean",
+                        "title": "Available",
+                        "default": true
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "title",
+                    "author",
+                    "isbn",
+                    "published_year"
+                ],
+                "title": "BookUpdate",
+                "description": "Body for PUT. PUT replaces the whole resource, so the same fields are required."
+            },
+            "ErrorInfo": {
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "title": "Code",
+                        "examples": [
+                            "not_found"
+                        ]
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "examples": [
+                            "Book with id 42 was not found"
+                        ]
+                    },
+                    "details": {
+                        "anyOf": [
+                            {},
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Details"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "code",
+                    "message"
+                ],
+                "title": "ErrorInfo"
+            },
+            "ErrorResponse": {
+                "properties": {
+                    "error": {
+                        "$ref": "#/components/schemas/ErrorInfo"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "error"
+                ],
+                "title": "ErrorResponse"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Books",
+            "description": "Create, read, update and delete books"
+        },
+        {
+            "name": "System",
+            "description": "Service health"
+        }
+    ]
+}
